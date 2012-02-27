@@ -6,6 +6,14 @@ using std::cout;
 using std::string;
 using namespace Magick;
 
+/* Each pixel in input image is rendered as
+ *    GRBx
+ *    BRGx
+ *    xxxx
+ * in the output image. So pixels are 4x3,
+ * including inter-pixel space.
+ */
+
 int main(int argc, char** argv)
 {
     InitializeMagick(*argv);
@@ -30,31 +38,19 @@ int main(int argc, char** argv)
     out.size(gout);
     out.magick("RGBA");
     cout << "Writing " << outputPath << '\n';
-    for(unsigned x = 0; x < gout.width(); x++) {
-        for(unsigned y = 0; y < gout.height(); y++) {
-            unsigned i = x/4;
-            unsigned j = y/3;
-            Color c = in.pixelColor(i,j);
-            unsigned a = x%4;
-            unsigned b = y%3;
-            if(a==0 && b==0 || a==2 && b==1) { // green
-                c.redQuantum(0);
-                c.blueQuantum(0);
-            }
-            else if(a==0 && b==1 || a==2 && b==0) { // blue
-                c.redQuantum(0);
-                c.greenQuantum(0);
-            }
-            else if(a==1 && b==0 || a==1 && b==1) { // red
-                c.greenQuantum(0);
-                c.blueQuantum(0);
-            }
-            else {
-                c.redQuantum(0);
-                c.greenQuantum(0);
-                c.blueQuantum(0);
-            }
-            out.pixelColor(x, y, c);
+    for(unsigned x = 0; x < gin.width(); x++) {
+        for(unsigned y = 0; y < gin.height(); y++) {
+            Color c = in.pixelColor(x,y);
+            unsigned i = x*4;
+            unsigned j = y*3;
+            // Row 0: GRB
+            out.pixelColor(i+0, j+0, Color(0, c.greenQuantum(), 0));
+            out.pixelColor(i+1, j+0, Color(c.redQuantum(), 0, 0));
+            out.pixelColor(i+2, j+0, Color(0, 0, c.blueQuantum()));
+            // Row 1: BRG
+            out.pixelColor(i+0, j+1, Color(0, 0, c.blueQuantum()));
+            out.pixelColor(i+1, j+1, Color(c.redQuantum(), 0, 0));
+            out.pixelColor(i+2, j+1, Color(0, c.greenQuantum(), 0));
         }
     }
     out.write(outputPath);
